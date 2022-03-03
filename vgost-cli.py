@@ -7,23 +7,31 @@ else:
     write_location = ""
 
 site_url = "https://downloads.khinsider.com"
+albumarr = []
 
-gamename = input("Enter search query: ").replace(" ", "+")
+while(len(albumarr) == 0):
+    gamename = input("Enter search query: ").replace(" ", "+")
+    searchpage = requests.get(site_url + "/search?search=" + gamename)
+    albumarr = re.findall(r"<a href=\"/game-soundtracks/album.*</a>", searchpage.text)
+    if(len(albumarr) == 0):
+        print("No search results found!")
 
-searchpage = requests.get(site_url + "/search?search=" + gamename)
+if searchpage.history and searchpage.url != searchpage.history[0].url:
+    #redirect detected, no need to choose an album
+    pagetitle = searchpage.text[searchpage.text.find('<title>') + 7 : searchpage.text.find('</title>')]
+    foldername = re.findall(r".*MP3 - Download ", pagetitle)[0][:-16]
+    albumpage = searchpage
+else:
+    albumlinklib = {}
+    for x, album in enumerate(albumarr):
+        albumlinklib[x + 1] = [album[album.find("\">")+2:-4], site_url + album[9:album.find("\">")]]
 
-albumarr = re.findall(r"<a href=\"/game-soundtracks/album.*</a>", searchpage.text)
+    for key in albumlinklib:
+        print("[{}] {}".format(key, albumlinklib[key][0]))
 
-albumlinklib = {}
-for x, album in enumerate(albumarr):
-    albumlinklib[x + 1] = [album[album.find("\">")+2:-4], site_url + album[9:album.find("\">")]]
-
-for key in albumlinklib:
-    print("[{}] {}".format(key, albumlinklib[key][0]))
-
-gameentry = int(input("Enter selection number: "))
-foldername = albumlinklib[gameentry][0]
-albumpage = requests.get(albumlinklib[int(gameentry)][1])
+    gameentry = int(input("Enter selection number: "))
+    foldername = albumlinklib[gameentry][0]
+    albumpage = requests.get(albumlinklib[int(gameentry)][1])
 
 songarr = re.findall(r"<a href=\"/game-soundtracks/album.*mp3\">[^<]*</a>", albumpage.text)
 
